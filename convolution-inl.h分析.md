@@ -1,3 +1,4 @@
+该文档为src/operator/convolution-inl.h的分析，可以和[编写自己的operator](./编写自己的Operator.md)一起看
 ```cpp
 /*!
  * Copyright (c) 2015 by Contributors
