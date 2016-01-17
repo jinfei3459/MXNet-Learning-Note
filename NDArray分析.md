@@ -42,4 +42,4 @@ data_array.WaitToRead();
 	mxnet::NDArray c_cpu =ctx_gpu.Copy(ctx_cpu);
 NDarray 提供Reshape和Slice（提取该Ndarray的特定部分，开始和结束的位置均表示第一维的位置）
 NDarray提供基本的加减乘除操作，均是点操作
-##关于符号编程
+

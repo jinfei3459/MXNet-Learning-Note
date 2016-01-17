@@ -1,5 +1,5 @@
-本文件根据http://mxnet.readthedocs.org/en/latest/developer-guide/operator.html完成
-可以和[卷积操作函数解释文档](./convolution-inl.h.md分析)一起看
+本文件根据http://mxnet.readthedocs.org/en/latest/developer-guide/operator.html 完成
+可以和[卷积操作函数分析文档](./convolution-inl.h分析.md)一起看
 #####操作接口
 有Forward和Backward
 ```cpp
