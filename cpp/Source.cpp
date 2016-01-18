@@ -202,11 +202,6 @@ public:
 			//cv::imshow("inter_layer", main_mat);	
 			}
 
-			for (int i = 0; i < out_shape[1]; i++)
-			{
-				
-			}
-
 
 			cv::Mat main_mat = cv::Mat::zeros(5 * out_shape[2], 4 * out_shape[3], CV_32FC1);
 			cv::Mat main_roi;

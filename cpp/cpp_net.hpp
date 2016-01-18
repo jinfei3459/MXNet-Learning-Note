@@ -206,18 +206,6 @@ namespace mxnet {
 				/*call every iter*/
 				TrainingCallBack(iter, exe);
 			}
-			in_args[0] =
-				val_data.Slice(4, 4).Copy(ctx_dev);
-			in_args[in_args.size() - 1] =
-				val_label.Slice(4, 4).Copy(ctx_dev);
-			in_args[0].WaitToRead();
-			in_args[in_args.size() - 1].WaitToRead();
-			delete exe;
-			exe = mxnet::Executor::Bind(net, ctx_dev, g2c, in_args, arg_grad_store,
-				grad_req_type, aux_states);
-			CHECK(exe);
-			exe->Forward(false);
-			const std::vector<mxnet::NDArray>& out = exe->outputs();
 		
 			argsl.assign(in_args.begin(), in_args.end());
 		
