@@ -6,7 +6,7 @@
 
 release版本主页 https://github.com/dmlc/mxnet/releases
 
-Release版本直接根据redame操作即可，.sln文件可以直接运行
+Release版本直接根据redame操作即可，.sln文件可以直接运行（win7运行很可能会出现问题，如果出现进不了主程序这种情况，可以尝试升级系统到win10）
 
 现在release版本有一些问题(2015.12.22)，某些函数在C++中调用可能会出现
 ```
@@ -14,7 +14,8 @@ error LNK2001: 无法解析的外部符号 Mxnet::Ndarray
 ```
 
 需要在头文件中找到Ndarray的类，在类名之前加入MXNET_API，重新编译
-另外本问题在已经有项目解决了，地址在https://github.com/hjk41/MxNet.cpp，我还没有试过，大家可以去看一下。
+另外本问题在已经有项目解决了，地址在https://github.com/hjk41/MxNet.cpp
+，我还没有试过，大家可以去看一下。
 ####mxnet在vs2013中的配置
 
 最简单的方法就是将编译生成好的.lib和.dll文件放在官方提供的release版本lib文件夹内，替换其中文件即可以
