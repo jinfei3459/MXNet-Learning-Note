@@ -127,3 +127,146 @@ MXNET_REGISTER_OP_PROPERTY(Convolution, ConvolutionOpProperty);
       -	[可选]如果Backward不需要Forward的所有输入和输出，检查DeclareBackwardDependency
       -	[可选]如果支持原址操作，检查ForwardInplaceOption和BackwardInplaceOption
 -	在OperatorProperty中注册
+
+####个人理解
+MXNet关于operator的编写和使用主要可以分为以下几大部分，还是以conv为例
+1.	operator的编写
+	-	`struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam>`用来定义conv中用到的各种参数，但是不包括输入输出参数。
+	-	`class ConvolutionOp : public Operator`主要实现前向和反向传播的定义
+	-	`class ConvolutionProp : public OperatorProperty`主要实现外部接口，在`ConvolutionProp`会有一个，`Operator* CreateOperator(Context ctx) const override {}`调用`ConvolutionOp`，但是ConvolutionProp仍不和外部直接有接口
+	-	所有以上完成之后需要注册
+		-	`DMLC_REGISTER_PARAMETER(ConvolutionParam);`
+		-	`MXNET_REGISTER_OP_PROPERTY(Convolution, ConvolutionProp)
+		.add_argument("data", "Symbol", "Input data to the ConvolutionOp.")
+		.add_argument("weight", "Symbol", "Weight matrix.")
+		.add_argument("bias", "Symbol", "Bias parameter.")
+		.add_arguments(ConvolutionParam::__FIELDS__())
+		.describe("Apply convolution to input then add a bias.");`可以看到，注册时接口为`ConvolutionProp`，其中`Convolution`为注册的名字，`add_argument`是为了方便使用者得到该操作的操作参数。
+	其中`MXNET_REGISTER_OP_PROPERTY`的定义为
+    ```cpp
+   #define MXNET_REGISTER_OP_PROPERTY(name, OperatorPropertyType)          \
+  DMLC_REGISTRY_REGISTER(::mxnet::OperatorPropertyReg, OperatorPropertyReg, name) \
+  .set_body([]() { return new OperatorPropertyType(); })                \
+  .set_return_type("Symbol") \
+  .check_name()
+  ```
+2. 调用编写好的层次
+	-	最直接的调用方法是
+	```cpp
+	OperatorProperty *OperatorProperty::Create(const char* type_name) {
+  	auto *creator = dmlc::Registry<OperatorPropertyReg>::Find(type_name);//即在已经注册的层次中寻找type_name，如果寻找到就会返回一个OperatorProperty
+  	if (creator == nullptr) {
+    LOG(FATAL) << "Cannot find Operator " << type_name << " in registry";
+ 	 }
+  return creator->body();
+	}
+	```
+    但是该方法接口并没有直接在dll中对外开放
+    -	现在使用的接口一般是
+   	```cpp
+   Symbol::Symbol(const std::string &operator_name, const std::string &name,
+               std::vector<const char *> input_keys,
+               std::vector<SymbolHandle> input_values,
+               std::vector<const char *> config_keys,
+               std::vector<const char *> config_values) {
+	SymbolHandle handle;
+	AtomicSymbolCreator creator = op_map_->GetSymbolCreator(operator_name);
+	MXSymbolCreateAtomicSymbol(creator, config_keys.size(), config_keys.data(),
+		config_values.data(), &handle);
+	MXSymbolCompose(handle, operator_name.c_str(), input_keys.size(),
+		input_keys.data(), input_values.data());
+	blob_ptr_ = std::make_shared<SymBlob>(handle);
+}
+```
+	-	其中`op_map_->GetSymbolCreator`定义如下
+
+```cpp
+class OpMap {
+public:
+  /*!
+  * \brief Create an Mxnet instance
+  */
+  inline OpMap() {
+    mx_uint num_symbol_creators = 0;
+    AtomicSymbolCreator *symbol_creators = nullptr;
+    int r =
+      MXSymbolListAtomicSymbolCreators(&num_symbol_creators, &symbol_creators);
+    CHECK_EQ(r, 0);
+    for (mx_uint i = 0; i < num_symbol_creators; i++) {
+      const char *name;
+      const char *description;
+      mx_uint num_args;
+      const char **arg_names;
+      const char **arg_type_infos;
+      const char **arg_descriptions;
+      const char *key_var_num_args;
+      r = MXSymbolGetAtomicSymbolInfo(symbol_creators[i], &name, &description,
+        &num_args, &arg_names, &arg_type_infos,
+        &arg_descriptions, &key_var_num_args);
+	 /*去除注释之后可以看到输出的是之前
+     std::cout << name << i << std::endl;
+	  if (i==17)
+	  {
+		  std::cout << name<<std::endl;
+		  for (int j = 0; j < num_args;j++)
+		  
+		  std::cout << j<<*(arg_names+j)<<*(arg_descriptions+j)<<std::endl;
+		 // std::cout << *arg_type_infos;
+	  }*/
+      CHECK_EQ(r, 0);
+      symbol_creators_[name] = symbol_creators[i];
+    }
+  }
+
+  /*!
+  * \brief Get a symbol creator with its name.
+  *
+  * \param name name of the symbol creator
+  * \return handle to the symbol creator
+  */
+  inline AtomicSymbolCreator GetSymbolCreator(const std::string &name) {
+    return symbol_creators_[name];
+  }
+private:
+  std::map<std::string, AtomicSymbolCreator> symbol_creators_;
+};
+
+```
+####关于NDArray，symbol和operator的关系
+一般来说，symbol中包含NDArray和operator，
+node,表示每个symbol中的节点，node总共可以分为三类
+-	正常node，包含一个图所要求的所有元素
+-	操作，inputs_为空，表示一个未应用的操作
+-	变量，sym_指向为空，表示一个张量
+
+因此我们一般定义两种symbol，一种是纯数据的，例如输入的data和偏置权值等
+第二种就是根据operator生成的symbol，在生成该symbol之时一般都会确定好输入权值等和第一类symbol的关系。
+具体根据operator生成symbol可以看conv生成symbol的定义
+```cpp
+inline Symbol Convolution(const std::string& symbol_name,
+                          Symbol data,
+                          Symbol weight,
+                          Symbol bias,
+                          Shape kernel,
+                          int num_filter,
+                          Shape stride = Shape(1,1),
+                          Shape dilate = Shape(1,1),
+                          Shape pad = Shape(0,0),
+                          int num_group = 1,
+                          int64_t workspace = 512,
+                          bool no_bias = false) {
+  return Operator("Convolution")
+           .SetParam("kernel", kernel)
+           .SetParam("num_filter", num_filter)
+           .SetParam("stride", stride)
+           .SetParam("dilate", dilate)
+           .SetParam("pad", pad)
+           .SetParam("num_group", num_group)
+           .SetParam("workspace", workspace)
+           .SetParam("no_bias", no_bias)
+           .SetInput("data", data)
+           .SetInput("weight", weight)
+           .SetInput("bias", bias)
+           .CreateSymbol(symbol_name);
+}
+```
