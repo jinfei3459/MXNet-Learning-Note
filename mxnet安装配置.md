@@ -15,7 +15,7 @@ error LNK2001: 无法解析的外部符号 Mxnet::Ndarray
 
 需要在头文件中找到Ndarray的类，在类名之前加入MXNET_API，重新编译
 另外本问题在已经有项目解决了，地址在https://github.com/hjk41/MxNet.cpp
-，我还没有试过，大家可以去看一下。
+本学习的例子现在均基于该项目
 ####mxnet在vs2013中的配置
 
 最简单的方法就是将编译生成好的.lib和.dll文件放在官方提供的release版本lib文件夹内，替换其中文件即可以
