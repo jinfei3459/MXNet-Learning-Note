@@ -59,6 +59,6 @@ error LNK2001: 无法解析的外部符号 Mxnet::Ndarray
 1. 选择vs2013，64位
 2. 选择blas为openblas（release版本有提供，可以直接用），配置选项为，include文件夹正常，lib文件选择目录中的libopenblas.dll.a
 3. 选择opencv文件夹，建议选择3.0版本，选择主文件夹下的build目录即可，cmake会根据这个目录直接配置的
-4. cuda一般不用管
+4. cuda一般不用管，甚至有时候手动更改cuda设置会出错
 
 
