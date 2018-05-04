@@ -7,3 +7,5 @@
 
 如果haroopad出现中文乱码，可将[default.css](.\haroopad\default.css)复制到
 C盘用户名\AppData\Local\Haroopad\Themes\editor文件夹下
+
+我后来转了caffe，所以这个已经很久不更新了，鉴于mxnet更新的速度之快，这里的内容应该只能误导大家，所以大家还是不要看了。
